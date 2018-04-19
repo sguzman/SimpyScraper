@@ -1,7 +1,6 @@
 import requests
 import bs4
 import redis
-import fn
 
 base = "http://23.95.221.108/page/"
 redisHash = 'ebooks'
