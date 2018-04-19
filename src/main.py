@@ -10,13 +10,16 @@ hashmap = red.hgetall(redisHash)
 
 limit = 1263
 
+
 def remove_prefix(text, prefix):
     if text.startswith(prefix):
         return text[len(prefix):]
     return text
 
+
 def removeUrl(text):
     return remove_prefix(text, 'https://it-eb.com')
+
 
 def fnmap(func, collection):
     newList = []
@@ -24,6 +27,7 @@ def fnmap(func, collection):
         newList.append(func(item))
 
     return newList
+
 
 def getRedis(url):
     html = ''
@@ -38,6 +42,7 @@ def getRedis(url):
 
     return html
 
+
 def getLinks(i):
     url = base + str(i)
 
@@ -46,7 +51,7 @@ def getLinks(i):
     soup = bs4.BeautifulSoup(html, 'html.parser')
     arts = soup.findAll('article')
 
-    return fnmap(removeUrl,fnmap(lambda x: x.find('a').attrs['href'], arts))
+    return fnmap(removeUrl, fnmap(lambda x: x.find('a').attrs['href'], arts))
 
 
 def getBook(path):
@@ -57,8 +62,10 @@ def getBook(path):
     soup = bs4.BeautifulSoup(html, 'html.parser')
     return soup
 
+
 def main():
     for i in range(1, limit + 1):
         print(getLinks(i))
+
 
 main()
