@@ -17,20 +17,19 @@ def remove_prefix(text, prefix):
     return text
 
 
-def removeUrl(text):
+def remove_url(text):
     return remove_prefix(text, 'https://it-eb.com')
 
 
 def fnmap(func, collection):
-    newList = []
+    new_list = []
     for item in collection:
-        newList.append(func(item))
+        new_list.append(func(item))
 
-    return newList
+    return new_list
 
 
-def getRedis(url):
-    html = ''
+def get_redis(url):
     key = str.encode(url)
     if hashmap.get(key) is None:
         print('Missed Http cache for url %s' % url)
@@ -43,21 +42,21 @@ def getRedis(url):
     return html
 
 
-def getLinks(i):
+def get_links(i):
     url = base + str(i)
 
-    html = getRedis(url)
+    html = get_redis(url)
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
     arts = soup.findAll('article')
 
-    return fnmap(removeUrl, fnmap(lambda x: x.find('a').attrs['href'], arts))
+    return fnmap(remove_url, fnmap(lambda x: x.find('a').attrs['href'], arts))
 
 
-def getBook(path):
+def get_book(path):
     url = base + path
 
-    html = getRedis(url)
+    html = get_redis(url)
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
     return soup
@@ -65,7 +64,7 @@ def getBook(path):
 
 def main():
     for i in range(1, limit + 1):
-        print(getLinks(i))
+        print(get_links(i))
 
 
 main()
