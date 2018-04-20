@@ -1,19 +1,7 @@
-import signal
-import sys
+import brotli
 import redis
 import bs4
 import requests
-
-
-def init():
-    def signal_handler():
-        print('You pressed Ctrl+C! - quiting...')
-        sys.exit(0)
-
-    signal.signal(signal.SIGINT, signal_handler)
-
-
-init()
 
 
 class SGlobals:
@@ -59,10 +47,11 @@ class SRedis:
         if SRedis.hashmap.get(key) is None:
             print('Missed Http cache for url %s' % url)
             html = requests.get(url).text
-            SRedis.red.hset(SGlobals.redisHash, url, html)
+            SRedis.red.hset(SGlobals.redisHash, url, brotli.compress(html.encode(), brotli.MODE_TEXT))
         else:
             print('Hit Http cache for url %s' % url)
             html = SRedis.hashmap.get(key)
+            html = brotli.decompress(html)
 
         return html
 
@@ -75,7 +64,10 @@ class SRedis:
         soup = bs4.BeautifulSoup(html, 'html.parser')
         arts = soup.findAll('article')
 
-        return [SUtil.remove_url(x.find('a').attrs['href']) for x in arts]
+        out = [SUtil.remove_url(x.find('a').attrs['href']) for x in arts]
+        print(out)
+
+        return out
 
 
     @staticmethod

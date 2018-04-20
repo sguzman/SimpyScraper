@@ -1,3 +1,4 @@
+brotli
 requests
 bs4
 redis
