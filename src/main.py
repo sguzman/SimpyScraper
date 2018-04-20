@@ -72,9 +72,19 @@ def get_book(i):
     html, http = get_redis(url)
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
-    arts = soup.find('h1', class_='post-title')
-    print(arts)
-    arts = arts.get_text()
+    arts = soup.find('h1', class_='post-title').get_text()
+
+    details = soup.find('div', class_='book-details').ul
+    detail_keys = [x.get_text() for x in details.findAll('span')]
+    detail_raw_vals = [x.get_text() for x in details.findAll('li')]
+    detail_dict = {k.rstrip(':').lower(): remove_prefix(v, k) for (k, v) in zip(detail_keys, detail_raw_vals)}
+
+    arts = [arts,
+            soup.find('input', attrs={'type': 'hidden', 'name': 'comment_post_ID'})['value'],
+            soup.find('div', class_='book-cover').img['src'],
+            detail_dict,
+            soup.find('div', class_='entry-inner').get_text()
+            ]
 
     return [arts, http]
 
