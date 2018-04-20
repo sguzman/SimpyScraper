@@ -64,10 +64,8 @@ class SRedis:
         soup = bs4.BeautifulSoup(html, 'html.parser')
         arts = soup.findAll('article')
 
-        out = [SUtil.remove_url(x.find('a').attrs['href']) for x in arts]
-        print(out)
+        return [SUtil.remove_url(x.find('a').attrs['href']) for x in arts]
 
-        return out
 
 
     @staticmethod
