@@ -4,15 +4,10 @@ import bs4
 import requests
 from multiprocessing.dummy import Pool as ThreadPool
 
-baseLink = "http://23.95.221.108/page/"
-baseBook = "http://23.95.221.108/"
-
-redisHash = 'ebooks'
 limit = 1268
 red = redis.StrictRedis()
-hashmap = red.hgetall(redisHash)
-coreLimit = 8
-pool = ThreadPool(coreLimit)
+hashmap = red.hgetall('ebooks')
+pool = ThreadPool(8)
 
 
 def remove_prefix(text, prefix):
