@@ -4,7 +4,9 @@ import bs4
 import requests
 from multiprocessing.dummy import Pool as ThreadPool
 
-base = "http://23.95.221.108/page/"
+baseLink = "http://23.95.221.108/page/"
+baseBook = "http://23.95.221.108/"
+
 redisHash = 'ebooks'
 limit = 1268
 red = redis.StrictRedis()
@@ -38,7 +40,7 @@ def fnflatmap(func, collection):
 def get_redis(url):
     key = str.encode(url)
     if hashmap.get(key) is None:
-        print('Missed Http cache for url %s' % url)
+        print(f'Missed Http cache for url {url}')
         html = requests.get(url).text
 
         comp = brotli.compress(html.encode(), brotli.MODE_TEXT)
@@ -46,7 +48,7 @@ def get_redis(url):
 
         html = [html, to_input]
     else:
-        print('Hit Http cache for url %s' % url)
+        print(f'Hit Http cache for url {url}')
         html = hashmap.get(key)
         html = [brotli.decompress(html), None]
 
@@ -54,7 +56,7 @@ def get_redis(url):
 
 
 def get_links(i):
-    url = base + str(i)
+    url = baseLink + str(i)
 
     html, http = get_redis(url)
 
@@ -65,13 +67,14 @@ def get_links(i):
 
 
 def get_book(i):
-    url = base + str(i)
+    url = baseBook + str(i)
 
     html, http = get_redis(url)
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
-    arts = soup.find('h1.post-title').get_text()
+    arts = soup.find('h1', class_='post-title')
     print(arts)
+    arts = arts.get_text()
 
     return [arts, http]
 
@@ -87,12 +90,12 @@ def pmap(func, collection):
         if new_entry is not None:
             new_entries.append(new_entry)
 
-    print('Got %d new Http entries' % len(new_entries))
+    print(f'Got {len(new_entries)} new Http entries')
     for pair in new_entries:
         key = pair[0]
         val = pair[1]
 
-        print('Inserting Http entry %s with length %d' % (key, len(val)))
+        print(f'Inserting Http entry {key} with length {len(val)}')
         red.hset(redisHash, key, val)
 
     return results
