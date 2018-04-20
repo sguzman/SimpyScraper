@@ -11,6 +11,7 @@ red = redis.StrictRedis()
 hashmap = red.hgetall('ebooks')
 pool = ThreadPool(8)
 q = queue.LifoQueue()
+p = queue.Queue()
 
 
 def remove_prefix(text, prefix):
@@ -38,7 +39,7 @@ def fnflatmap(func, collection):
 def get_redis(url):
     key = str.encode(url)
     if hashmap.get(key) is None:
-        print(f'Missed Http cache for url {url}')
+        p.put(f'Missed Http cache for url {url}')
         html = requests.get(url).text
 
         comp = brotli.compress(html.encode(), brotli.MODE_TEXT)
@@ -46,7 +47,7 @@ def get_redis(url):
 
         html = [html, to_input]
     else:
-        print(f'Hit Http cache for url {url}')
+        p.put(f'Hit Http cache for url {url}')
         html = hashmap.get(key)
         html = [brotli.decompress(html), None]
 
@@ -92,12 +93,18 @@ def get_host(i):
     return get_redis(url)
 
 
-def setRedis():
+def set_redis():
     while q.not_empty:
         key, val = q.get(timeout=100)
 
-        print(f'Inserting Http entry {key} with length {len(val)}')
+        p.put(f'Inserting Http entry {key} with length {len(val)}')
         red.hset('ebooks', key, val)
+
+
+def print_this():
+    while p.not_empty:
+        msg = p.get()
+        print(msg)
 
 
 def pmap(func, collection):
@@ -111,12 +118,13 @@ def pflatmap(func, collection):
 
 
 def main():
-    threading.Thread(target=setRedis, daemon=True).start()
+    threading.Thread(target=set_redis, daemon=True).start()
+    threading.Thread(target=print_this, daemon=True).start()
 
     ls = pflatmap(get_links, range(1, limit))
     bs = pmap(get_book, ls)
     hs = pmap(get_host, bs)
-    print(len(hs))
+    p.put(len(hs))
 
 
 main()
