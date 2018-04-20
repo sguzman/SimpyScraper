@@ -2,12 +2,15 @@ import brotli
 import redis
 import bs4
 import requests
+import queue
+import threading
 from multiprocessing.dummy import Pool as ThreadPool
 
 limit = 1268
 red = redis.StrictRedis()
 hashmap = red.hgetall('ebooks')
 pool = ThreadPool(8)
+q = queue.LifoQueue()
 
 
 def remove_prefix(text, prefix):
@@ -54,17 +57,19 @@ def get_links(i):
     url = f"http://23.95.221.108/page/{i}"
 
     html, http = get_redis(url)
+    q.put(http)
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
     arts = soup.findAll('article')
 
-    return [[remove_url(x.find('a').attrs['href']) for x in arts], http]
+    return [remove_url(x.find('a').attrs['href']) for x in arts]
 
 
 def get_book(path):
     url = f"http://23.95.221.108/{path}"
 
     html, http = get_redis(url)
+    q.put(http)
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
     arts = soup.find('h1', class_='post-title').get_text()
@@ -74,40 +79,29 @@ def get_book(path):
     detail_raw_vals = [x.get_text() for x in details.findAll('li')]
     detail_dict = {k.rstrip(':').lower(): remove_prefix(v, k) for (k, v) in zip(detail_keys, detail_raw_vals)}
 
-    arts = [arts,
+    return [arts,
             soup.find('input', attrs={'type': 'hidden', 'name': 'comment_post_ID'})['value'],
             soup.find('div', class_='book-cover').img['src'],
             detail_dict,
             soup.find('div', class_='entry-inner').get_text()
             ]
 
-    return [arts, http]
-
 
 def get_host(i):
-    url = f'http://23.95.221.108/download.php?id={i}'
+    url = f'http://23.95.221.108/download.php?id={i[1]}'
     return get_redis(url)
 
 
-def pmap(func, collection):
-    raw_results = pool.map(func, collection)
-    results = []
-    new_entries = []
-    for i in raw_results:
-        result = i[0]
-        new_entry = i[1]
-        results.append(result)
-        if new_entry is not None:
-            new_entries.append(new_entry)
-
-    print(f'Got {len(new_entries)} new Http entries')
-    for pair in new_entries:
-        key = pair[0]
-        val = pair[1]
+def setRedis():
+    while q.not_empty:
+        key, val = q.get(timeout=100)
 
         print(f'Inserting Http entry {key} with length {len(val)}')
         red.hset('ebooks', key, val)
 
+
+def pmap(func, collection):
+    results = pool.map(func, collection)
     return results
 
 
@@ -117,10 +111,12 @@ def pflatmap(func, collection):
 
 
 def main():
+    threading.Thread(target=setRedis, daemon=True).start()
+
     ls = pflatmap(get_links, range(1, limit))
     bs = pmap(get_book, ls)
     hs = pmap(get_host, bs)
-    print(len(bs))
+    print(len(hs))
 
 
 main()
