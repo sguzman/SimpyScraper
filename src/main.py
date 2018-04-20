@@ -51,7 +51,7 @@ def get_redis(url):
 
 
 def get_links(i):
-    url = baseLink + str(i)
+    url = f"http://23.95.221.108/page/{i}"
 
     html, http = get_redis(url)
 
@@ -61,8 +61,8 @@ def get_links(i):
     return [[remove_url(x.find('a').attrs['href']) for x in arts], http]
 
 
-def get_book(i):
-    url = baseBook + str(i)
+def get_book(path):
+    url = f"http://23.95.221.108/{path}"
 
     html, http = get_redis(url)
 
@@ -84,6 +84,11 @@ def get_book(i):
     return [arts, http]
 
 
+def get_host(i):
+    url = f'http://23.95.221.108/download.php?id={i}'
+    return get_redis(url)
+
+
 def pmap(func, collection):
     raw_results = pool.map(func, collection)
     results = []
@@ -101,7 +106,7 @@ def pmap(func, collection):
         val = pair[1]
 
         print(f'Inserting Http entry {key} with length {len(val)}')
-        red.hset(redisHash, key, val)
+        red.hset('ebooks', key, val)
 
     return results
 
@@ -114,6 +119,7 @@ def pflatmap(func, collection):
 def main():
     ls = pflatmap(get_links, range(1, limit))
     bs = pmap(get_book, ls)
+    hs = pmap(get_host, bs)
     print(len(bs))
 
 
