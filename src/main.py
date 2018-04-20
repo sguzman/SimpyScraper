@@ -2,7 +2,6 @@ import brotli
 import redis
 import bs4
 import requests
-import queue
 from multiprocessing.dummy import Pool as ThreadPool
 
 base = "http://23.95.221.108/page/"
@@ -10,6 +9,8 @@ redisHash = 'ebooks'
 limit = 1268
 red = redis.StrictRedis()
 hashmap = red.hgetall(redisHash)
+coreLimit = 8
+pool = ThreadPool(coreLimit)
 
 
 def remove_prefix(text, prefix):
@@ -34,7 +35,7 @@ def fnflatmap(func, collection):
     return new_list
 
 
-def get_redis(url, new_entries):
+def get_redis(url):
     key = str.encode(url)
     if hashmap.get(key) is None:
         print('Missed Http cache for url %s' % url)
@@ -43,35 +44,51 @@ def get_redis(url, new_entries):
         comp = brotli.compress(html.encode(), brotli.MODE_TEXT)
         to_input = [key, comp]
 
-        new_entries.put(to_input)
+        html = [html, to_input]
     else:
         print('Hit Http cache for url %s' % url)
         html = hashmap.get(key)
-        html = brotli.decompress(html)
+        html = [brotli.decompress(html), None]
 
     return html
 
 
-def get_links(i, new_entries):
+def get_links(i):
     url = base + str(i)
 
-    html = get_redis(url, new_entries)
+    html, http = get_redis(url)
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
     arts = soup.findAll('article')
 
-    return [remove_url(x.find('a').attrs['href']) for x in arts]
+    return [[remove_url(x.find('a').attrs['href']) for x in arts], http]
 
 
-def pmap(func, collection, cores=4):
-    pool = ThreadPool(cores)
-    new_entries = queue.LifoQueue()
+def get_book(i):
+    url = base + str(i)
 
-    results = pool.map(lambda x: func(x, new_entries), collection)
-    new_entries.join()
-    print('Got %d Http entries' % new_entries.qsize())
-    for i in range(new_entries.qsize()):
-        pair = new_entries.get()
+    html, http = get_redis(url)
+
+    soup = bs4.BeautifulSoup(html, 'html.parser')
+    arts = soup.find('h1.post-title').get_text()
+    print(arts)
+
+    return [arts, http]
+
+
+def pmap(func, collection):
+    raw_results = pool.map(func, collection)
+    results = []
+    new_entries = []
+    for i in raw_results:
+        result = i[0]
+        new_entry = i[1]
+        results.append(result)
+        if new_entry is not None:
+            new_entries.append(new_entry)
+
+    print('Got %d new Http entries' % len(new_entries))
+    for pair in new_entries:
         key = pair[0]
         val = pair[1]
 
@@ -81,14 +98,15 @@ def pmap(func, collection, cores=4):
     return results
 
 
-def pflatmap(func, collection, cores=4):
-    results = pmap(func, collection, cores)
+def pflatmap(func, collection):
+    results = pmap(func, collection)
     return [item for sublist in results for item in sublist]
 
 
 def main():
     ls = pflatmap(get_links, range(1, limit))
-    print(len(ls))
+    bs = pmap(get_book, ls)
+    print(len(bs))
 
 
 main()
