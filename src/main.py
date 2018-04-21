@@ -4,14 +4,33 @@ import bs4
 import requests
 import queue
 import threading
+import random
 from multiprocessing.dummy import Pool as ThreadPool
 
 limit = 1268
 red = redis.StrictRedis()
 hashmap = red.hgetall('ebooks')
-pool = ThreadPool(8)
+pool = ThreadPool(4)
 q = queue.LifoQueue()
 p = queue.Queue()
+
+
+def get(url):
+    DEFAULT_USER_AGENTS = [
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/65.0.3325.181 Safari/537.36",
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/65.0.3325.181 Chrome/65.0.3325.181 Safari/537.36",
+        "Mozilla/5.0 (Linux; Android 7.0; Moto G (5) Build/NPPS25.137-93-8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/64.0.3282.137 Mobile Safari/537.36",
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 7_0_4 like Mac OS X) AppleWebKit/537.51.1 (KHTML, like Gecko) Version/7.0 Mobile/11B554a Safari/9537.53",
+        "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0",
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:59.0) Gecko/20100101 Firefox/59.0",
+        "Mozilla/5.0 (Windows NT 6.3; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0"
+    ]
+
+    user_agent = random.choice(DEFAULT_USER_AGENTS)
+    headers = {'User-Agent': user_agent}
+    p.put(f'Choosing User Agent {user_agent} for request')
+
+    return requests.get(url, headers=headers).text
 
 
 def remove_prefix(text, prefix):
@@ -37,19 +56,20 @@ def fnflatmap(func, collection):
 
 
 def get_redis(url):
-    key = str.encode(url)
+    key = url.encode()
     if hashmap.get(key) is None:
         p.put(f'Missed Http cache for url {url}')
-        html = requests.get(url).text
+        html = get(url)
 
         comp = brotli.compress(html.encode(), brotli.MODE_TEXT)
-        to_input = [key, comp]
-
-        html = [html, to_input]
+        q.put((key, comp))
     else:
         p.put(f'Hit Http cache for url {url}')
         html = hashmap.get(key)
-        html = [brotli.decompress(html), None]
+        html = brotli.decompress(html)
+        if html is None:
+            p.put(f'Body for key {url} is messed up - calling again')
+            return get_redis(url)
 
     return html
 
@@ -57,8 +77,7 @@ def get_redis(url):
 def get_links(i):
     url = f"http://23.95.221.108/page/{i}"
 
-    html, http = get_redis(url)
-    q.put(http)
+    html = get_redis(url)
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
     arts = soup.findAll('article')
@@ -69,8 +88,7 @@ def get_links(i):
 def get_book(path):
     url = f"http://23.95.221.108/{path}"
 
-    html, http = get_redis(url)
-    q.put(http)
+    html = get_redis(url)
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
     arts = soup.find('h1', class_='post-title').get_text()
@@ -95,7 +113,7 @@ def get_host(i):
 
 def set_redis():
     while q.not_empty:
-        key, val = q.get(timeout=100)
+        key, val = q.get()
 
         p.put(f'Inserting Http entry {key} with length {len(val)}')
         red.hset('ebooks', key, val)
