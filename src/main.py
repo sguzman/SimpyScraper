@@ -83,9 +83,12 @@ def get_rapidHost(path):
 
 
 def main():
-    ls = [links for idx in range(1, limit) for links in get_links(idx)]
-    bs = [get_book(x) for x in ls]
-    hs = [get_host(x) for x in bs]
-    print(hs)
+    ls = [links for links in map(get_links, range(1, limit))]
+    bs = map(get_host, ls)
+    hs = map(get_host, bs)
+    xs = map(get_rapidHost, hs)
+    for i in xs:
+        print(i)
+
 
 main()
