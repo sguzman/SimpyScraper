@@ -69,6 +69,19 @@ def get_host(i):
     return get_redis(url)
 
 
+def get_rapidHost(path):
+    url = f"http://23.95.221.108/{path}"
+    html = get_redis(url)
+    soup = bs4.BeautifulSoup(html, 'html.parser')
+
+    details = soup.find('div', class_='file-info').ul
+    detail_keys = [x.get_text() for x in details.findAll('span')]
+    detail_raw_vals = [x.get_text() for x in details.findAll('li')]
+    detail_dict = {k.rstrip(':').lower(): remove_prefix(v, k) for (k, v) in zip(detail_keys, detail_raw_vals)}
+
+    return detail_dict,
+
+
 def main():
     ls = [links for idx in range(1, limit) for links in get_links(idx)]
     bs = [get_book(x) for x in ls]
