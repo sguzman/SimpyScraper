@@ -8,12 +8,6 @@ red = redis.StrictRedis()
 hashmap = red.hgetall('ebooks')
 
 
-def remove_prefix(text, prefix):
-    if text.startswith(prefix):
-        return text[len(prefix):]
-    return text
-
-
 def get_redis(url):
     key = url.encode()
     if hashmap.get(key) is None:
@@ -40,7 +34,7 @@ def get_links(i):
     arts = soup.findAll('article')
     hrefs = [x.find('a').attrs['href'] for x in arts]
 
-    return [remove_prefix(x, 'https://it-eb.com/') for x in hrefs]
+    return [x.lstrip('https://it-eb.com/') for x in hrefs]
 
 
 def get_book(path):
@@ -54,7 +48,7 @@ def get_book(path):
     details = soup.find('div', class_='book-details').ul
     detail_keys = [x.get_text() for x in details.findAll('span')]
     detail_raw_vals = [x.get_text() for x in details.findAll('li')]
-    detail_dict = {k.rstrip(':').lower(): remove_prefix(v, k) for (k, v) in zip(detail_keys, detail_raw_vals)}
+    detail_dict = {k.rstrip(':').lower(): v.lstrip(k) for (k, v) in zip(detail_keys, detail_raw_vals)}
 
     return [arts,
             soup.find('input', attrs={'type': 'hidden', 'name': 'comment_post_ID'})['value'],
@@ -77,7 +71,7 @@ def get_rapid_host(path):
     details = soup.find('div', class_='file-info').ul
     detail_keys = [x.get_text() for x in details.findAll('span')]
     detail_raw_vals = [x.get_text() for x in details.findAll('li')]
-    detail_dict = {k.rstrip(':').lower(): remove_prefix(v, k) for (k, v) in zip(detail_keys, detail_raw_vals)}
+    detail_dict = {k.rstrip(':').lower(): v.lstrip(k) for (k, v) in zip(detail_keys, detail_raw_vals)}
 
     return detail_dict,
 
