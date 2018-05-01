@@ -15,7 +15,7 @@ def remove_prefix(text, prefix):
 
 
 def get_redis(url):
-    key = url.encode()
+    key = url.encode() if type(url) == str else url
     if hashmap.get(key) is None:
         print(f'Missed Http cache for url {url}')
         html = requests.get(url).text
@@ -74,6 +74,9 @@ def get_rapid_host(url):
     soup = bs4.BeautifulSoup(html, 'html.parser')
 
     details = soup.find('div', class_='file-info').ul
+    if details is None:
+        return {}
+
     detail_keys = [x.get_text() for x in details.findAll('span')]
     detail_raw_vals = [x.get_text() for x in details.findAll('li')]
     detail_dict = {k.rstrip(':').lower(): remove_prefix(v, k) for (k, v) in zip(detail_keys, detail_raw_vals)}
