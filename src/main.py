@@ -69,7 +69,7 @@ def get_host(i):
     return get_redis(url)
 
 
-def get_rapidHost(path):
+def get_rapid_host(path):
     url = f"http://23.95.221.108/{path}"
     html = get_redis(url)
     soup = bs4.BeautifulSoup(html, 'html.parser')
@@ -86,7 +86,7 @@ def main():
     ls = [links for links in map(get_links, range(1, limit))]
     bs = map(get_host, ls)
     hs = map(get_host, bs)
-    xs = map(get_rapidHost, hs)
+    xs = map(get_rapid_host, hs)
     for i in xs:
         print(i)
 
