@@ -2,6 +2,7 @@ import brotli
 import redis
 import bs4
 import requests
+import sqlite3
 
 limit = 1268
 red = redis.StrictRedis()
@@ -64,20 +65,24 @@ def get_book(path):
 
 
 def main():
-    ls = [x for links in range(1, limit) for x in get_links(links)]
-    bs = [get_book(x) for x in ls]
-    for x in bs:
-        print(f"""
-        INSERT INTO ebooks (id, title, img, desc) VALUES (NULL, '{x[0]}', '{x[1]}', '{x[-1]}')
+    conn = sqlite3.connect("item.db")
+    c = conn.cursor()
+    c.execute("""
+        CREATE TABLE ebooks(
+          id INTEGER PRIMARY KEY ASC AUTOINCREMENT NOT NULL UNIQUE,
+          title VARCHAR(255) UNIQUE,
+          img VARCHAR(200),
+          des VARCHAR(2000)
+        );
         """)
-    print("""
-    CREATE TABLE ebooks(
-      id INTEGER PRIMARY KEY ASC AUTOINCREMENT NOT NULL UNIQUE,
-      title VARCHAR(255) UNIQUE,
-      img VARCHAR(200),
-      desc VARCHAR(2000)
-    );
-    """)
+    conn.commit()
+    for i in range(1, limit):
+        for path in get_links(i):
+            book = get_book(path)
+            c.execute("INSERT INTO ebooks (title, img, des) VALUES (?, ?, ?);", [book[0], book[1], book[3]])
+        conn.commit()
 
+    c.close()
+    conn.close()
 
 main()
