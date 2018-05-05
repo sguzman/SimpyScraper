@@ -64,6 +64,7 @@ def get_book(path):
             ]
 
 
+# {'isbn-13', 'authors', 'format', 'publication date', 'size', 'publisher', 'isbn-10', 'pages'}
 def main():
     conn = sqlite3.connect("item.db")
     c = conn.cursor()
@@ -71,18 +72,46 @@ def main():
         CREATE TABLE ebooks(
           id INTEGER PRIMARY KEY ASC AUTOINCREMENT NOT NULL UNIQUE,
           title VARCHAR(255) UNIQUE,
-          img VARCHAR(200),
-          des VARCHAR(2000)
+          img VARCHAR(200) UNIQUE,
+          des VARCHAR(2000),
+          isbn_10 VARCHAR(15),
+          isbn_13 VARCHAR(20),
+          format VARCHAR(10),
+          author VARCHAR(30),
+          pub_date DATE,
+          size VARCHAR(15),
+          pub VARCHAR(30),
+          pages VARCHAR(30)
         );
         """)
     conn.commit()
     for i in range(1, limit):
         for path in get_links(i):
             book = get_book(path)
-            c.execute("INSERT INTO ebooks (title, img, des) VALUES (?, ?, ?);", [book[0], book[1], book[3]])
+            try:
+                c.execute(
+                    "INSERT INTO ebooks (title, img, des, isbn_10, isbn_13, format, author, pub_date, size, pub, pages) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", [
+                        book[0],
+                        book[1],
+                        book[3],
+                        book[2].get('isbn-10'),
+                        book[2].get('isbn-13'),
+                        book[2].get('format'),
+                        book[2].get('authors'),
+                        book[2].get('publication date'),
+                        book[2].get('size'),
+                        book[2].get('publisher'),
+                        book[2].get('pages'),
+                    ])
+            except sqlite3.IntegrityError:
+                print(f'Skipping non-unique title, {book[0]}')
+                continue
+
         conn.commit()
 
     c.close()
     conn.close()
+
 
 main()
