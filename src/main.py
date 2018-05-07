@@ -18,14 +18,12 @@ def remove_prefix(text, prefix):
 def get_redis(url):
     key = url.encode() if type(url) == str else url
     if hashmap.get(key) is None:
-        print(f'Missed Http cache for url {url}')
         html = requests.get(url).text
 
         comp = brotli.compress(html.encode(), brotli.MODE_TEXT)
         print(f'Inserting Http entry {key} with length {len(comp)}')
         red.hset('ebooks', key, comp)
     else:
-        print(f'Hit Http cache for url {url}')
         html = hashmap.get(key)
         html = brotli.decompress(html)
 
@@ -113,49 +111,35 @@ def main():
     for i in range(1, limit):
         for path in get_links(i):
             book = get_book(path)
-            try:
-                out = c.execute(
-                    "INSERT INTO ebooks "
-                    "(title, img, des, isbn_10, isbn_13, format, author, pub_date, size, pub, pages, host) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", [
-                        book[0],
-                        book[1],
-                        book[3],
-                        book[2].get('isbn-10'),
-                        book[2].get('isbn-13'),
-                        book[2].get('format'),
-                        book[2].get('authors'),
-                        book[2].get('publication date'),
-                        book[2].get('size'),
-                        book[2].get('publisher'),
-                        book[2].get('pages'),
-                        book[4]
-                    ])
-                conn.commit()
-                print(f'Inserted ({book[0]}, {book[1]}, ...) -> ebooks')
+            out = c.execute(
+                "INSERT INTO ebooks "
+                "(title, img, des, isbn_10, isbn_13, format, author, pub_date, size, pub, pages, host) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);", [
+                    book[0],
+                    book[1],
+                    book[3],
+                    book[2].get('isbn-10'),
+                    book[2].get('isbn-13'),
+                    book[2].get('format'),
+                    book[2].get('authors'),
+                    book[2].get('publication date'),
+                    book[2].get('size'),
+                    book[2].get('publisher'),
+                    book[2].get('pages'),
+                    book[4]
+                ])
+            conn.commit()
+            print(f'Inserted ({book[0]}, {book[1]}, ...) -> ebooks')
 
-                ebook_id = out.lastrowid
-                for cat in book[5]:
-                    try:
-                        c.execute("""INSERT INTO categories (name) VALUES (?)""", [cat])
-                        print(f'Inserted ({cat}) -> categories')
-                    except sqlite3.IntegrityError:
-                        print(f'Skipping category {cat}')
+            ebook_id = out.lastrowid
+            for cat in book[5]:
+                c.execute("""INSERT OR IGNORE INTO categories (name) VALUES (?)""", [cat])
+                c.execute("""SELECT id FROM categories WHERE name = ?""", [cat])
+                cat_id = c.fetchone()[0]
+                c.execute("""INSERT INTO categories_data (ebook_id, cat_id) VALUES (?, ?)""", [ebook_id, cat_id])
+                print(f'Inserted [{book[0]} {cat}] ({ebook_id}, {cat_id}) -> categories_data')
 
-                    c.execute("""SELECT id FROM categories WHERE name = ?""", [cat])
-                    cat_id = c.fetchone()[0]
-                    try:
-                        c.execute("""INSERT INTO categories_data (ebook_id, cat_id) VALUES (?, ?)""",
-                                  [ebook_id, cat_id])
-                    except:
-                        print('Failed to insert into categories_data table')
-                        exit(0)
-                    print(f'Inserted [{book[0]} {cat}] ({ebook_id}, {cat_id}) -> categories_data')
-
-                conn.commit()
-            except sqlite3.IntegrityError as err:
-                print(err)
-                continue
+            conn.commit()
 
     c.close()
     conn.close()
