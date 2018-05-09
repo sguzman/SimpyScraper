@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package items;
+
+message Book {
+    string title = 1;
+    string img = 2;
+    string desc = 3;
+    string host = 4;
+    repeated string categories = 5;
+    string isbn_10 = 6;
+    string isbn_13 = 7;
+    string authors = 8;
+    string format = 9;
+    string pub_date = 10;
+    string size = 11;
+    string pub = 12;
+    string pages = 13;
+}
