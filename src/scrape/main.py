@@ -1,8 +1,12 @@
+import sys
+
+for line in sys.path:
+     print(line)
 import brotli
 import bs4
 import redis
 import requests
-from ..scrape import items_pb2
+from scrape import items_pb2
 
 limit = 1283
 red = redis.StrictRedis()
