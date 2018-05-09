@@ -58,7 +58,7 @@ def main():
     for i in range(1, limit + 1):
         for path in get_links(i):
             book = get_book(path)
-            print(book)
+            print(book[0])
             b = items_pb2.Book()
 
             b.title = book[0]
