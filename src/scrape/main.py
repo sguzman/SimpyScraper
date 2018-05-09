@@ -1,7 +1,6 @@
 import sys
 
-for line in sys.path:
-     print(line)
+sys.path.append('/home/travis/build/sguzman/SimpyScraper/src')
 import brotli
 import bs4
 import redis
