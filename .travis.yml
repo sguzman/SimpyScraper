@@ -6,6 +6,6 @@
     - tar -xzvf protobuf-2.4.1.tar.gz
     - pushd protobuf-2.4.1 && ./configure --prefix=/usr && make && sudo make install && popd
   install:
-    - pip3 install -r requirements.txt
+    - pip install -r requirements.txt
   script:
     - python src/scrape/main.py
