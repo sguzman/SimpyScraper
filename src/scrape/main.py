@@ -2,7 +2,7 @@ import brotli
 import bs4
 import redis
 import requests
-from . import items_pb2
+from ..scrape import items_pb2
 
 limit = 1283
 red = redis.StrictRedis()
