@@ -1,6 +1,4 @@
 google
 protobuf
-brotli
 requests
 bs4
-redis

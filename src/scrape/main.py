@@ -1,15 +1,11 @@
 import sys
 
 sys.path.append('/home/travis/build/sguzman/SimpyScraper/src')
-import brotli
 import bs4
-import redis
 import requests
 from scrape import items_pb2
 
 limit = 1283
-red = redis.StrictRedis()
-hash_map = red.hgetall('ebooks')
 
 
 def remove_prefix(text, prefix):
@@ -18,25 +14,10 @@ def remove_prefix(text, prefix):
     return text
 
 
-def get_redis(url):
-    key = url.encode() if type(url) == str else url
-    if hash_map.get(key) is None:
-        html = requests.get(url).text
-
-        comp = brotli.compress(html.encode(), brotli.MODE_TEXT)
-        print(f'Inserting Http entry {key} with length {len(comp)}')
-        red.hset('ebooks', key, comp)
-    else:
-        html = hash_map.get(key)
-        html = brotli.decompress(html)
-
-    return html
-
-
 def get_links(i):
     url = f"http://23.95.221.108/page/{i}"
 
-    html = get_redis(url)
+    html = requests.get(url).text
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
     arts = soup.findAll('article')
@@ -48,12 +29,12 @@ def get_links(i):
 def get_book(path):
     url = f"http://23.95.221.108/{path}"
 
-    html = get_redis(url)
+    html = requests.get(url).text
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
     arts = soup.find('h1', class_='post-title').get_text()
     e_id = soup.find('input', {'type': 'hidden', 'name': 'comment_post_ID'})['value']
-    host = get_redis(f'http://23.95.221.108/download.php?id={e_id}')
+    host = requests.get(f'http://23.95.221.108/download.php?id={e_id}').text
 
     categories = [x.get_text() for x in soup.find('p', class_='post-btm-cats').findAll('a')]
 
