@@ -2,7 +2,7 @@ import brotli
 import bs4
 import redis
 import requests
-from .items_pb2 import *
+from src.proto import items_pb2
 
 limit = 1281
 red = redis.StrictRedis()
@@ -70,13 +70,8 @@ def get_book(path):
 
 # {'isbn-13', 'authors', 'format', 'publication date', 'size', 'publisher', 'isbn-10', 'pages'}
 def main():
-    some_file = open("items.txt", "w+")
-    for i in range(1, limit):
-        for path in get_links(i):
-            book = get_book(path)
-            some_file.write(str(book) + '\n')
-    some_file.flush()
-    some_file.close()
+    obj = items_pb2.Book()
+    print(obj)
 
 
 main()
