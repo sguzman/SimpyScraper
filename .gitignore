@@ -102,3 +102,4 @@ ENV/
 .idea
 item.db
 item.db-journal
+items.txt

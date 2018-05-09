@@ -4,9 +4,9 @@ import redis
 import requests
 from src.proto import items_pb2
 
-limit = 1281
+limit = 1283
 red = redis.StrictRedis()
-hashmap = red.hgetall('ebooks')
+hash_map = red.hgetall('ebooks')
 
 
 def remove_prefix(text, prefix):
@@ -17,14 +17,14 @@ def remove_prefix(text, prefix):
 
 def get_redis(url):
     key = url.encode() if type(url) == str else url
-    if hashmap.get(key) is None:
+    if hash_map.get(key) is None:
         html = requests.get(url).text
 
         comp = brotli.compress(html.encode(), brotli.MODE_TEXT)
         print(f'Inserting Http entry {key} with length {len(comp)}')
         red.hset('ebooks', key, comp)
     else:
-        html = hashmap.get(key)
+        html = hash_map.get(key)
         html = brotli.decompress(html)
 
     return html
@@ -71,7 +71,7 @@ def get_book(path):
 # {'isbn-13', 'authors', 'format', 'publication date', 'size', 'publisher', 'isbn-10', 'pages'}
 def main():
     some_file = open("items.txt", "wb")
-    for i in range(1, limit):
+    for i in range(1, limit + 1):
         for path in get_links(i):
             book = get_book(path)
             print(book)
