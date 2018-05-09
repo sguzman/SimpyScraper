@@ -70,8 +70,40 @@ def get_book(path):
 
 # {'isbn-13', 'authors', 'format', 'publication date', 'size', 'publisher', 'isbn-10', 'pages'}
 def main():
-    obj = items_pb2.Book()
-    print(obj)
+    some_file = open("items.txt", "wb")
+    for i in range(1, limit):
+        for path in get_links(i):
+            book = get_book(path)
+            print(book)
+            b = items_pb2.Book()
+
+            b.title = book[0]
+            b.img = book[1]
+            b.desc = book[3]
+            b.host = book[4]
+
+            b.categories.extend(book[5])
+
+            if book[2].get('isbn-10') is not None:
+                b.isbn_10 = book[2]['isbn-10']
+            if book[2].get('isbn-13') is not None:
+                b.isbn_13 = book[2]['isbn-13']
+            if book[2].get('authors') is not None:
+                b.authors = book[2]['authors']
+            if book[2].get('format') is not None:
+                b.format = book[2]['format']
+            if book[2].get('publication date') is not None:
+                b.pub_date = book[2]['publication date']
+            if book[2].get('size') is not None:
+                b.size = book[2]['size']
+            if book[2].get('publisher') is not None:
+                b.pub = book[2]['publisher']
+            if book[2].get('pages') is not None:
+                b.pages = book[2]['pages']
+
+            some_file.write(b.SerializeToString())
+        some_file.flush()
+    some_file.close()
 
 
 main()
