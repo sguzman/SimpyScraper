@@ -5,6 +5,7 @@ import requests
 from scrape import items_pb2
 
 limit = 1283
+cache_size = 100
 red = redis.StrictRedis()
 hash_map = red.hgetall('ebooks')
 
@@ -71,11 +72,17 @@ def get_book(path):
 
 # {'isbn-13', 'authors', 'format', 'publication date', 'size', 'publisher', 'isbn-10', 'pages'}
 def main():
-    some_file = open("items.txt", "wb")
+    some_file = open("../items_cache.txt", "wb")
+    count = 0
     for i in range(1, limit + 1):
         for path in get_links(i):
+            if count is cache_size:
+                some_file.flush()
+                some_file.close()
+                some_file = open("../items.txt", "wb")
+
             book = get_book(path)
-            print(book[0])
+            print(book)
             b = items_pb2.Book()
 
             b.title = book[0]
@@ -103,6 +110,7 @@ def main():
                 b.pages = book[2]['pages']
 
             some_file.write(b.SerializeToString())
+            count += 1
         some_file.flush()
     some_file.close()
 
