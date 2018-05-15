@@ -103,3 +103,4 @@ ENV/
 item.db
 item.db-journal
 items.txt
+txt/

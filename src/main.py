@@ -1,12 +1,8 @@
-import brotli
 import bs4
-import redis
 import requests
 import os
 
 limit = 1290
-red = redis.StrictRedis()
-hash_map = red.hgetall('ebooks')
 
 
 def remove_prefix(text, prefix):
@@ -15,24 +11,9 @@ def remove_prefix(text, prefix):
     return text
 
 
-def get_redis(url):
-    key = url.encode() if type(url) == str else url
-    if hash_map.get(key) is None:
-        html = requests.get(url).text
-
-        comp = brotli.compress(html.encode(), brotli.MODE_TEXT)
-        print(f'Inserting Http entry {key} with length {len(comp)}')
-        red.hset('ebooks', key, comp)
-    else:
-        html = hash_map.get(key)
-        html = brotli.decompress(html)
-
-    return html
-
-
 def get_links(i):
     url = f"http://23.95.221.108/page/{i}"
-    html = get_redis(url)
+    html = requests.get(url).text
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
     arts = soup.findAll('article')
@@ -43,7 +24,7 @@ def get_links(i):
 
 def get_book(path):
     url = f"http://23.95.221.108/{path}"
-    return get_redis(url)
+    return requests.get(url).text
 
 
 def write(file_name, content):
@@ -54,7 +35,7 @@ def write(file_name, content):
 
 
 def main():
-    dir_name = "./txt/"
+    dir_name = "../txt/"
     if not os.path.exists(dir_name):
         os.mkdir(dir_name)
 
@@ -62,6 +43,7 @@ def main():
         for path in get_links(i):
             file = f'{dir_name}{path}.txt'
             if not os.path.exists(file):
+                print(file)
                 html = get_book(path)
                 write(file, html)
 
