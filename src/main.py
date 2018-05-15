@@ -31,10 +31,8 @@ def get_redis(url):
     return html
 
 
-
 def get_links(i):
     url = f"http://23.95.221.108/page/{i}"
-
     html = get_redis(url)
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
@@ -46,7 +44,6 @@ def get_links(i):
 
 def get_book(path):
     url = f"http://23.95.221.108/{path}"
-
     html = get_redis(url)
 
     soup = bs4.BeautifulSoup(html, 'html.parser')
@@ -77,6 +74,7 @@ def main():
     for i in range(1, limit + 1):
         for path in get_links(i):
             if count is cache_size:
+                print('Done with cache file')
                 some_file.flush()
                 some_file.close()
                 some_file = open("../items.txt", "wb")
