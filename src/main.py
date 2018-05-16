@@ -1,6 +1,7 @@
 import bs4
 import requests
 import os
+import brotli
 
 limit = 1290
 
@@ -28,7 +29,7 @@ def get_book(path):
 
 
 def write(file_name, content):
-    fd = open(file_name, 'w')
+    fd = open(file_name, 'wb')
     fd.write(content)
     fd.flush()
     fd.close()
@@ -41,13 +42,12 @@ def main():
 
     for i in range(1, limit + 1):
         for path in get_links(i):
-            file = f'{dir_name}{path}.txt'
+            file = f'{dir_name}{path}.txt.brotli'
             if not os.path.exists(file):
                 print(file)
                 html = get_book(path)
-                write(file, html)
-
-
+                bro = brotli.compress(html.encode(), brotli.MODE_TEXT)
+                write(file, bro)
 
 
 main()
